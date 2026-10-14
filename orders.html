@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة الكاشير - سيرافينو</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #8B4513;
+            --accent: #D2691E;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f4f1ea;
+            margin: 0;
+            padding: 15px;
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .btn-qr-topleft {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .b-tab {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .b-tab.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .order-card {
+            background: white;
+            border-top: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .modal-qr {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-qr.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 320px;
+            text-align: center;
+        }
+
+        .btn-danger {
+            background: #c0392b;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2>📋 لوحة الكاشير واستقبال الطلبات - سيرافينو</h2>
+        <button class="btn-qr-topleft" onclick="openQrModal()">📱 صانع QR الطاولات</button>
+    </header>
+
+    <div style="display:flex; gap:10px; margin:20px 0; overflow-x:auto;">
+        <button class="b-tab active" onclick="filterBranch('الكل', event)">كل الفروع</button>
+        <button class="b-tab" onclick="filterBranch('فرع العزيزية', event)">فرع العزيزية</button>
+        <button class="b-tab" onclick="filterBranch('فرع الجميلية', event)">فرع الجميلية</button>
+        <button class="b-tab" onclick="filterBranch('فرع الميريديان', event)">فرع الميريديان</button>
+    </div>
+
+    <div style="background:white; padding:15px; border-radius:8px; margin-bottom:20px; border-right:5px solid #f1c40f;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h4 id="coupons-title-text" style="margin:0;">🏆 الخصومات الفائزة النشطة:</h4>
+            <button class="btn-danger" onclick="clearAllCoupons()">🗑️ مسح جميع الكوبونات</button>
+        </div>
+        <div id="live-coupons-list" style="display:flex; gap:10px; overflow-x:auto; padding-top:10px;"></div>
+    </div>
+
+    <div id="ordersContainer" class="orders-grid"></div>
+
+    <div id="qr-modal" class="modal-qr">
+        <div class="modal-box">
+            <h3>منشئ كيوآر الطاولة 🖨️</h3>
+            <div style="margin:10px 0; text-align:right;">
+                <label>الفرع:</label>
+                <select id="modal-qr-branch" style="width:100%; padding:6px; margin-top:4px;" onchange="makeQR()">
+                    <option value="فرع العزيزية">فرع العزيزية</option>
+                    <option value="فرع الجميلية">فرع الجميلية</option>
+                    <option value="فرع الميريديان">فرع الميريديان</option>
+                </select>
+            </div>
+            <div style="margin:10px 0; text-align:right;">
+                <label>رقم الطاولة:</label>
+                <input type="number" id="modal-qr-table" value="1" min="1"
+                    style="width:100%; padding:6px; margin-top:4px;" onchange="makeQR()">
+            </div>
+            <div id="qrcode-box" style="display:flex; justify-content:center; margin:15px 0;"></div>
+            <button onclick="window.print()"
+                style="padding:6px 12px; background:#333; color:white; border:none; border-radius:4px; cursor:pointer;">طباعة
+                الكود</button>
+            <button onclick="closeQrModal()"
+                style="padding:6px 12px; background:#888; color:white; border:none; border-radius:4px; cursor:pointer; margin-right:5px;">إغلاق</button>
+        </div>
+    </div>
+
+    <script>
+        (function checkAdminAuth() {
+            const ADMIN_PASS = "51784178899";
+            let savedAuth = sessionStorage.getItem("seraphino_admin_logged");
+            if (!savedAuth) {
+                let pass = prompt("يرجى إدخال كلمة مرور الإدارة لدخول هذه الصفحة:");
+                if (pass === ADMIN_PASS) {
+                    sessionStorage.setItem("seraphino_admin_logged", "true");
+                } else {
+                    alert("كلمة المرور غير صحيحة!");
+                    window.location.href = "index.html";
+                }
+            }
+        })();
+
+        let currentBranch = 'الكل';
+        const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+        function filterBranch(branch, evt) {
+            currentBranch = branch;
+            document.querySelectorAll('.b-tab').forEach(b => b.classList.remove('active'));
+            evt.target.classList.add('active');
+            loadOrders();
+            loadCoupons();
+        }
+
+        function loadOrders() {
+            const container = document.getElementById('ordersContainer');
+            let orders = JSON.parse(localStorage.getItem('seraphino_orders')) || [];
+            const now = Date.now();
+
+            orders = orders.filter(o => {
+                if (o.status === 'COMPLETED' && o.completedAt) {
+                    return (now - o.completedAt) < TWENTY_FOUR_HOURS_MS;
+                }
+                return true;
+            });
+
+            if (currentBranch !== 'الكل') {
+                orders = orders.filter(o => o.branch === currentBranch);
+            }
+
+            // ترتيب الطلبات: غير المسلمة أولاً (حسب الأقدم)، والمسلمة في الأسفل
+            orders.sort((a, b) => {
+                if (a.status !== 'COMPLETED' && b.status === 'COMPLETED') return -1;
+                if (a.status === 'COMPLETED' && b.status !== 'COMPLETED') return 1;
+                return (a.timestamp || 0) - (b.timestamp || 0); // الأقدم أولاً
+            });
+
+            if (orders.length === 0) {
+                container.innerHTML = '<p style="color:#888;">لا توجد طلبات حية لهذا الفرع حالياً.</p>';
+                return;
+            }
+
+            container.innerHTML = orders.map((order) => {
+                let timeRemainingText = "";
+                if (order.status === 'COMPLETED' && order.completedAt) {
+                    let elapsed = now - order.completedAt;
+                    let remainingMs = TWENTY_FOUR_HOURS_MS - elapsed;
+                    let hoursLeft = Math.floor(remainingMs / (1000 * 60 * 60));
+                    let minsLeft = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+                    timeRemainingText = `<small style="display:block; color:#777; font-size:0.75rem; margin-top:4px;">يختفي بعد: ${hoursLeft}س و ${minsLeft}د</small>`;
+                }
+
+                return `
+                    <div class="order-card" style="${order.status === 'COMPLETED' ? 'opacity:0.8; background:#f9f9f9; border-top-color:#27ae60;' : ''}">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>طاولة ${order.table} (${order.customerName})</strong>
+                            <small>${order.time}</small>
+                        </div>
+                        <small style="color:var(--accent); font-weight:bold;">${order.branch}</small>
+                        <ul style="font-size:0.85rem; padding-right:15px; margin:10px 0;">
+                            ${order.items.map(i => `<li>${i.name} (x${i.quantity})</li>`).join('')}
+                            ${order.water ? '<li style="color:#2980b9;">💧 ماء كبيرة (+5,000)</li>' : ''}
+                        </ul>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>${order.total.toLocaleString()} ل.س</strong>
+                            <div style="text-align:left;">
+                                <span style="font-size:0.75rem; color:${order.status === 'COMPLETED' ? 'green' : 'orange'}; font-weight:bold;">
+                                    ${order.status === 'COMPLETED' ? 'تم التسليم ✓' : 'قيد التحضير ⏳'}
+                                </span>
+                                ${order.status !== 'COMPLETED' ? `<button onclick="completeOrder(${order.id})" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-right:5px; font-weight:bold;">تسليم ✓</button>` : ''}
+                                ${timeRemainingText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function completeOrder(orderId) {
+            let orders = JSON.parse(localStorage.getItem('seraphino_orders')) || [];
+            let order = orders.find(o => o.id === orderId);
+            if (order) {
+                order.status = 'COMPLETED';
+                order.completedAt = Date.now();
+                localStorage.setItem('seraphino_orders', JSON.stringify(orders));
+                loadOrders();
+            }
+        }
+
+        function loadCoupons() {
+            const list = document.getElementById('live-coupons-list');
+            let coupons = JSON.parse(localStorage.getItem('seraphino_coupons')) || [];
+            let activeCoupons = coupons.filter(c => !c.used);
+            if (currentBranch !== 'الكل') activeCoupons = activeCoupons.filter(c => c.branch === currentBranch);
+
+            if (activeCoupons.length === 0) {
+                list.innerHTML = '<small style="color:#888;">لا توجد خصومات غير مستخدمة حالياً</small>';
+                return;
+            }
+
+            list.innerHTML = activeCoupons.map(c => `
+                <div style="padding:8px 12px; background:#8B4513; color:white; border-radius:6px; font-size:0.85rem; min-width:160px; text-align:center;">
+                    <strong>${c.prize}</strong><br>
+                    <small>${c.customerName} (طاولة ${c.table})</small><br>
+                    <button onclick="useCoupon(${c.id})" style="background:#f1c40f; color:#333; border:none; padding:4px 8px; border-radius:4px; margin-top:5px; cursor:pointer; font-weight:bold;">صرف الخصم ✓</button>
+                </div>
+            `).join('');
+        }
+
+        function useCoupon(couponId) {
+            let coupons = JSON.parse(localStorage.getItem('seraphino_coupons')) || [];
+            let coupon = coupons.find(c => c.id === couponId);
+            if (coupon) {
+                coupon.used = true;
+                localStorage.setItem('seraphino_coupons', JSON.stringify(coupons));
+                loadCoupons();
+            }
+        }
+
+        function clearAllCoupons() {
+            if (confirm("هل أنت تأكد من إخفاء ومسح جميع الكوبونات المعروضة؟")) {
+                let coupons = JSON.parse(localStorage.getItem('seraphino_coupons')) || [];
+                coupons.forEach(c => c.used = true);
+                localStorage.setItem('seraphino_coupons', JSON.stringify(coupons));
+                loadCoupons();
+            }
+        }
+
+        function openQrModal() {
+            document.getElementById('qr-modal').classList.add('active');
+            makeQR();
+        }
+        function closeQrModal() {
+            document.getElementById('qr-modal').classList.remove('active');
+        }
+
+        function makeQR() {
+            const container = document.getElementById('qrcode-box');
+            container.innerHTML = '';
+            const b = document.getElementById('modal-qr-branch').value;
+            const t = document.getElementById('modal-qr-table').value;
+            const baseUrl = window.location.href.replace('orders.html', 'index.html');
+            const url = `${baseUrl}?branch=${encodeURIComponent(b)}&table=${t}`;
+            new QRCode(container, { text: url, width: 130, height: 130 });
+        }
+
+        setInterval(loadOrders, 5000);
+        setInterval(loadCoupons, 5000);
+        loadOrders();
+        loadCoupons();
+    </script>
+</body>
+
+</html>

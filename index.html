@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كوكتيل وبوظة سيرافينو</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+
+<body>
+
+    <header class="main-header">
+        <h1>🍹 كوكتيل وبوظة سيرافينو</h1>
+        <p>عالم المذاق الرفيع والابتكار</p>
+    </header>
+
+    <div id="session-info-bar" class="session-bar hidden">
+        <span>الفرع: <strong id="selected-branch-display"></strong></span> |
+        <span>طاولة رقم: <strong id="selected-table-display"></strong></span>
+        <button id="change-table-btn" class="btn-small">تغيير</button>
+    </div>
+
+    <!-- نافذة اختيار الفرع والطاولة -->
+    <div id="table-selection-modal" class="modal-overlay active">
+        <div class="modal-card">
+            <h3>أهلاً بك في سيرافينو 🍦</h3>
+            <p>يرجى تحديد الفرع ورقم الطاولة لمتابعة الطلب:</p>
+            <div class="form-group">
+                <label>اختر الفرع:</label>
+                <select id="branch-select" class="custom-select">
+                    <option value="فرع العزيزية">فرع العزيزية (الرئيسي)</option>
+                    <option value="فرع الجميلية">فرع الجميلية</option>
+                    <option value="فرع الميريديان">فرع الميريديان</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>رقم الطاولة:</label>
+                <input type="number" id="table-input" class="custom-input" placeholder="مثال: 5" min="1" max="50">
+            </div>
+            <button id="start-order-btn" class="btn-primary">بدء التصفح والطلب</button>
+        </div>
+    </div>
+
+    <nav class="categories-nav">
+        <button class="nav-btn active" data-category="all">الكل</button>
+        <button class="nav-btn" data-category="cocktails">كوكتيلات</button>
+        <button class="nav-btn" data-category="icecream">بوظة وقشطية</button>
+        <button class="nav-btn" data-category="juices">عصائر طبيعية</button>
+        <button class="nav-btn" data-category="salads">سلطات فواكه</button>
+    </nav>
+
+    <!-- شريط تتبع الإنفاق -->
+    <div class="spending-tracker-card">
+        <span>إجمالي إنفاق جهازك: <strong id="my-spending-total">0 ل.س</strong></span>
+        <small id="spending-progress-val" style="color:var(--accent-color); font-weight:bold;">100,000 ل.س للفرصة
+            القادمة</small>
+    </div>
+
+    <main class="container">
+        <div id="menu-grid" class="menu-grid"></div>
+
+        <!-- عجلة الروليت -->
+        <section id="roulette-section-container" class="roulette-section">
+            <h2>🎡 عجلة الحظ والتحديات</h2>
+            <p>كل 100,000 ل.س تمنحك فرصة لتدوير العجلة وكسب الخصومات!</p>
+
+            <div class="wheel-wrapper">
+                <div class="pointer">▼</div>
+                <div id="roulette-wheel" class="wheel">
+                    <div id="wheel-center-target" class="wheel-center">سيرافينو</div>
+                </div>
+            </div>
+
+            <button id="spin-wheel-btn" class="btn-spin">
+                🎰 تدوير العجلة (المحاولات المتاحة: <span id="spin-btn-count">0</span>)
+            </button>
+
+            <div class="my-coupons-container">
+                <h4>🎟️ بطاقات الخصومات المكتسبة على جهازك (الغير مستخدمة):</h4>
+                <div id="my-coupons-list" class="coupons-flex-list">
+                    <small style="color:#777;">لا توجد بطاقات نشطة حالياً.</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- آراء وتقييمات الزبائن -->
+        <section class="review-section" style="background:white; padding:15px; border-radius:10px; margin-top:20px;">
+            <h3>💬 آراء وتقييمات الزبائن</h3>
+            <div id="public-reviews-list" style="margin-bottom:15px; max-height:200px; overflow-y:auto;"></div>
+
+            <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+            <h4>أضف تقييمك:</h4>
+            <div class="form-group" style="margin-top:8px;">
+                <select id="review-stars" class="custom-select">
+                    <option value="5">⭐⭐⭐⭐⭐ ممتاز جداً</option>
+                    <option value="4">⭐⭐⭐⭐ جيد جداً</option>
+                    <option value="3">⭐⭐⭐ مقبول</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <textarea id="review-text" class="custom-input" style="height:60px;"
+                    placeholder="اكتب ملاحظتك هنا..."></textarea>
+            </div>
+            <button id="submit-review-btn" class="btn-primary">إرسال التقييم</button>
+        </section>
+    </main>
+
+    <!-- شريط السلة العائم الكامل القابل للنقر -->
+    <div id="cart-floating-bar" class="cart-floating-bar">
+        <div class="cart-info">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-count" id="cart-total-count">0</span>
+            <span class="cart-text">عرض السلة الكاملة</span>
+        </div>
+        <div class="cart-price" id="cart-total-price">0 ل.س</div>
+    </div>
+
+    <!-- نافذة السلة -->
+    <div id="cart-modal" class="modal-overlay">
+        <div class="cart-modal-card">
+            <div class="cart-header">
+                <h3>سلة الطلبات - طاولة <span id="cart-table-num">-</span></h3>
+                <button class="close-cart-btn" id="close-cart-modal-btn">&times;</button>
+            </div>
+
+            <div class="cart-body">
+                <div class="form-group">
+                    <label>الاسم الثلاثي للعميل (مطلوب):</label>
+                    <input type="text" id="customer-fullname-input" class="custom-input"
+                        placeholder="مثال: محمد أحمد العبد الله">
+                </div>
+
+                <div id="cart-items-list" class="cart-items-list"></div>
+
+                <div class="water-option-card">
+                    <label class="water-checkbox-label">
+                        <input type="checkbox" id="water-checkbox" checked>
+                        <span id="water-label-text">قارورة ماء معدنية كبيرة (+ 5,000 ل.س) - إجبارية لأول طلب</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="cart-footer">
+                <div class="total-row">
+                    <span>التكلفة الإجمالية:</span>
+                    <strong id="final-price-display">0 ل.س</strong>
+                </div>
+                <button id="send-order-btn" class="btn-success">إرسال الطلب للكاشير 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة النجاح -->
+    <div id="success-modal" class="modal-overlay">
+        <div class="modal-card text-center">
+            <h2>🎉 تم إرسال طلبك بنجاح!</h2>
+            <p style="margin: 10px 0;">وصل الطلب لفريق الكاشير وسيتم تحضيره فوراً.</p>
+            <p class="spin-reward-msg" style="color:var(--accent-color); font-weight:bold;">حصلت على <strong
+                    id="success-spins-count">0</strong> محاولات لتدوير العجلة!</p>
+            <button id="close-success-btn" class="btn-primary" style="margin-top:15px;">طلب المزيد ➕</button>
+        </div>
+    </div>
+
+    <div id="coupon-result-modal" class="modal-overlay">
+        <div class="modal-card text-center" id="coupon-modal-body"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>التقرير التحليلي - سيرافينو</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>📈 التقرير التحليلي للطلبات المبيعة والمسلمة فعلياً - سيرافينو</h2>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>إجمالي الطلبات المبيعة</h3>
+            <h2 id="analytics-orders-count">0</h2>
+        </div>
+        <div class="stat-card">
+            <h3>المبيعات الإجمالية الفعليّة</h3>
+            <h2 id="analytics-total-rev" style="color:#8B4513;">0 ل.س</h2>
+        </div>
+        <div class="stat-card">
+            <h3>متوسط قيمة الطلب المبيع</h3>
+            <h2 id="analytics-avg-order" style="color:#27ae60;">0 ل.س</h2>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h3>مخطط المبيعات المسلمة حسب الفروع</h3>
+        <canvas id="realAnalyticsChart"></canvas>
+    </div>
+
+    <script>
+        (function checkAdminAuth() {
+            const ADMIN_PASS = "51784178899";
+            let savedAuth = sessionStorage.getItem("seraphino_admin_logged");
+            if (!savedAuth) {
+                let pass = prompt("يرجى إدخال كلمة مرور الإدارة لدخول هذه الصفحة:");
+                if (pass === ADMIN_PASS) {
+                    sessionStorage.setItem("seraphino_admin_logged", "true");
+                } else {
+                    alert("كلمة المرور غير صحيحة!");
+                    window.location.href = "index.html";
+                }
+            }
+        })();
+
+        function renderRealAnalytics() {
+            let orders = JSON.parse(localStorage.getItem('seraphino_orders')) || [];
+            let completedOrders = orders.filter(o => o.status === 'COMPLETED');
+            let totalRev = completedOrders.reduce((sum, o) => sum + Number(o.total), 0);
+            let avgOrder = completedOrders.length > 0 ? Math.round(totalRev / completedOrders.length) : 0;
+
+            document.getElementById('analytics-orders-count').innerText = completedOrders.length;
+            document.getElementById('analytics-total-rev').innerText = totalRev.toLocaleString() + ' ل.س';
+            document.getElementById('analytics-avg-order').innerText = avgOrder.toLocaleString() + ' ل.س';
+
+            let branchTotals = { "فرع العزيزية": 0, "فرع الجميلية": 0, "فرع الميريديان": 0 };
+            completedOrders.forEach(o => {
+                if (branchTotals[o.branch] !== undefined) {
+                    branchTotals[o.branch] += Number(o.total);
+                }
+            });
+
+            const ctx = document.getElementById('realAnalyticsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(branchTotals),
+                    datasets: [{
+                        label: 'إجمالي المبيعات المسلمة (ل.س)',
+                        data: Object.values(branchTotals),
+                        backgroundColor: ['#8B4513', '#D2691E', '#27ae60']
+                    }]
+                }
+            });
+        }
+        renderRealAnalytics();
+    </script>
+</body>
+
+</html>

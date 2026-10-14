@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة السيطرة والإدارة - سيرافينو</title>
+    <style>
+        :root {
+            --primary: #8B4513;
+            --accent: #D2691E;
+            --bg: #f7f5f0;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .grid-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-top: 4px solid var(--accent);
+        }
+
+        .item-edit-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+
+        .price-input {
+            width: 90px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .btn-status {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+
+        .btn-on {
+            background: #27ae60;
+        }
+
+        .btn-off {
+            background: #c0392b;
+        }
+
+        .btn-action {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-delete {
+            background: #c0392b;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-reset-danger {
+            background: #c0392b;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2>⚙️ لوحة السيطرة والإدارة المباشرة - سيرافينو</h2>
+    </header>
+
+    <div class="grid-box">
+        <div class="card">
+            <h3>🎡 مفتاح تشغيل / إيقاف الروليت</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+                <span id="roulette-status-text">حالة الروليت: <strong>مفعلة تعمل</strong></span>
+                <button id="roulette-toggle-btn" class="btn-status btn-on" onclick="toggleRouletteSystem()">إيقاف النظام
+                    🛑</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>💰 الجرد والتدقيق المالي (المبيعات المسلمة فعلياً)</h3>
+            <ul style="list-style:none; padding:0; margin:15px 0; line-height:2;">
+                <li>عدد الطلبات المبيعة: <strong id="real-orders-count">0</strong> طلب</li>
+                <li>إجمالي الأرباح الفعلية: <strong id="real-total-revenue" style="color:green;">0 ل.س</strong></li>
+            </ul>
+        </div>
+
+        <div class="card" style="border-top-color: #c0392b; background: #fff5f5;">
+            <h3 style="color: #c0392b;">🔥 إعادة ضبط المصنع والنظام</h3>
+            <p style="font-size: 0.85rem; color: #666; margin: 10px 0;">حذف جميع الطلبات التجريبية، الكوبونات الفائزة،
+                والتقييمات وإعادة المتجر لنقطة البداية.</p>
+            <button class="btn-reset-danger" onclick="resetEntireSystemData()">🧹 مسح جميع البيانات وإعادة
+                الضبط</button>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1; background: #faf8f5; border-top-color: #27ae60;">
+            <h3 style="color:#27ae60;">➕ إضافة صنف جديد للمنيو</h3>
+            <div
+                style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px;">
+                <div class="form-group"><label>اسم المنتج:</label><input type="text" id="new-item-name"
+                        class="form-control" placeholder="مثال: كوكتيل اللافندر"></div>
+                <div class="form-group"><label>الفئة:</label><select id="new-item-category" class="form-control">
+                        <option value="cocktails">كوكتيلات</option>
+                        <option value="icecream">بوظة وقشطية</option>
+                        <option value="juices">عصائر طبيعية</option>
+                        <option value="salads">سلطات فواكه</option>
+                    </select></div>
+                <div class="form-group"><label>السعر (ل.س):</label><input type="number" id="new-item-price"
+                        class="form-control" placeholder="25000"></div>
+                <div class="form-group"><label>رابط الصورة (URL):</label><input type="text" id="new-item-img"
+                        class="form-control" placeholder="اختياري"></div>
+            </div>
+            <div class="form-group"><label>وصف المنتج:</label><input type="text" id="new-item-desc" class="form-control"
+                    placeholder="مثال: طبقات المانجو مع الكريمة"></div>
+            <button onclick="addNewMenuItem()" class="btn-action"
+                style="background:#27ae60; font-size:1rem; padding:10px; margin-top:5px; width:100%;">➕ إضافة الصنف
+                للمنيو فوراً</button>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1;">
+            <h3>🍔 إدارة الأصناف والأسعار المباشرة</h3>
+            <div id="full-menu-management-list" style="margin-top:15px;"></div>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1;">
+            <h3>⭐ موافقة ونشر تقييمات الزبائن</h3>
+            <div id="pending-reviews-list" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <script>
+        (function checkAdminAuth() {
+            const ADMIN_PASS = "51784178899";
+            let savedAuth = sessionStorage.getItem("seraphino_admin_logged");
+            if (!savedAuth) {
+                let pass = prompt("يرجى إدخال كلمة مرور الإدارة لدخول هذه الصفحة:");
+                if (pass === ADMIN_PASS) {
+                    sessionStorage.setItem("seraphino_admin_logged", "true");
+                } else {
+                    alert("كلمة المرور غير صحيحة!");
+                    window.location.href = "index.html";
+                }
+            }
+        })();
+
+        function loadManagerMenu() {
+            const list = document.getElementById('full-menu-management-list');
+            let menu = JSON.parse(localStorage.getItem('seraphino_db_menu')) || [];
+            list.innerHTML = menu.map(item => `
+                <div class="item-edit-row">
+                    <div style="display:flex; align-items:center; gap:8px; flex:1;">
+                        <img src="${item.img}" style="width:40px; height:40px; border-radius:5px; object-fit:cover;">
+                        <div><strong>${item.name}</strong><small style="display:block; color:#777;">${item.desc || ''}</small></div>
+                    </div>
+                    <div>
+                        <label>السعر:</label>
+                        <input type="number" class="price-input" id="price-input-${item.id}" value="${item.price}">
+                        <button class="btn-action" onclick="saveItemPrice(${item.id})">حفظ</button>
+                    </div>
+                    <button class="btn-status ${item.available ? 'btn-on' : 'btn-off'}" onclick="toggleItemAvailability(${item.id})">${item.available ? 'متوفر ✓' : 'معطل ✕'}</button>
+                    <button class="btn-delete" onclick="deleteMenuItem(${item.id})">🗑️ حذف</button>
+                </div>
+            `).join('');
+        }
+
+        function addNewMenuItem() {
+            const name = document.getElementById('new-item-name').value.trim();
+            const category = document.getElementById('new-item-category').value;
+            const price = document.getElementById('new-item-price').value;
+            let img = document.getElementById('new-item-img').value.trim() || "https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=500";
+            const desc = document.getElementById('new-item-desc').value.trim();
+
+            if (!name || !price) { alert("يرجى إدخال اسم المنتج والسعر!"); return; }
+
+            let menu = JSON.parse(localStorage.getItem('seraphino_db_menu')) || [];
+            menu.push({ id: Date.now(), name, category, price: Number(price), desc: desc || "من أطيب أصناف سيرافينو", img, available: true });
+            localStorage.setItem('seraphino_db_menu', JSON.stringify(menu));
+
+            document.getElementById('new-item-name').value = '';
+            document.getElementById('new-item-price').value = '';
+            document.getElementById('new-item-img').value = '';
+            document.getElementById('new-item-desc').value = '';
+            alert("✅ تم إضافة الصنف بنجاح!");
+            loadManagerMenu();
+        }
+
+        function saveItemPrice(id) {
+            let menu = JSON.parse(localStorage.getItem('seraphino_db_menu')) || [];
+            let newPrice = document.getElementById(`price-input-${id}`).value;
+            let item = menu.find(p => p.id == id);
+            if (item) {
+                item.price = Number(newPrice);
+                localStorage.setItem('seraphino_db_menu', JSON.stringify(menu));
+                alert("تم تحديث السعر بنجاح!");
+                loadManagerMenu();
+            }
+        }
+
+        function toggleItemAvailability(id) {
+            let menu = JSON.parse(localStorage.getItem('seraphino_db_menu')) || [];
+            let item = menu.find(p => p.id == id);
+            if (item) {
+                item.available = !item.available;
+                localStorage.setItem('seraphino_db_menu', JSON.stringify(menu));
+                loadManagerMenu();
+            }
+        }
+
+        function deleteMenuItem(id) {
+            if (confirm("هل أنت متأكد من الحذف؟")) {
+                let menu = JSON.parse(localStorage.getItem('seraphino_db_menu')) || [];
+                menu = menu.filter(p => p.id != id);
+                localStorage.setItem('seraphino_db_menu', JSON.stringify(menu));
+                loadManagerMenu();
+            }
+        }
+
+        function toggleRouletteSystem() {
+            let currentState = localStorage.getItem('seraphino_roulette_enabled') !== 'false';
+            localStorage.setItem('seraphino_roulette_enabled', !currentState);
+            updateRouletteUI();
+        }
+
+        function updateRouletteUI() {
+            let enabled = localStorage.getItem('seraphino_roulette_enabled') !== 'false';
+            const txt = document.getElementById('roulette-status-text');
+            const btn = document.getElementById('roulette-toggle-btn');
+            txt.innerHTML = enabled ? 'حالة الروليت: <strong style="color:green;">مفعلة تعمل</strong>' : 'حالة الروليت: <strong style="color:red;">معطلة ومتوقفة</strong>';
+            btn.className = enabled ? 'btn-status btn-on' : 'btn-status btn-off';
+            btn.innerText = enabled ? 'إيقاف النظام 🛑' : 'تشغيل النظام ▶️';
+        }
+
+        function calculateRealFinancials() {
+            let orders = JSON.parse(localStorage.getItem('seraphino_orders')) || [];
+            let completedOrders = orders.filter(o => o.status === 'COMPLETED');
+            let totalRev = completedOrders.reduce((sum, o) => sum + Number(o.total), 0);
+            document.getElementById('real-orders-count').innerText = completedOrders.length;
+            document.getElementById('real-total-revenue').innerText = totalRev.toLocaleString() + ' ل.س';
+        }
+
+        function loadReviewsManager() {
+            const list = document.getElementById('pending-reviews-list');
+            let reviews = JSON.parse(localStorage.getItem('seraphino_reviews')) || [];
+            if (reviews.length === 0) { list.innerHTML = '<small style="color:#888;">لا توجد تقييمات حالياً.</small>'; return; }
+            list.innerHTML = reviews.map((r, i) => `
+                <div style="background:#f9f9f9; padding:10px; margin-bottom:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <div><strong>${r.name}</strong> (${r.stars} ⭐)<p style="margin:5px 0;">"${r.text}"</p></div>
+                    <div>
+                        ${!r.approved ? `<button onclick="approveReview(${i})" class="btn-action" style="background:green;">نشر ✓</button>` : '<span style="color:green; font-weight:bold;">منشور ✓</span>'}
+                        <button onclick="deleteReview(${i})" class="btn-delete" style="margin-right:5px;">حذف</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function approveReview(index) {
+            let reviews = JSON.parse(localStorage.getItem('seraphino_reviews')) || [];
+            reviews[index].approved = true;
+            localStorage.setItem('seraphino_reviews', JSON.stringify(reviews));
+            loadReviewsManager();
+        }
+
+        function deleteReview(index) {
+            let reviews = JSON.parse(localStorage.getItem('seraphino_reviews')) || [];
+            reviews.splice(index, 1);
+            localStorage.setItem('seraphino_reviews', JSON.stringify(reviews));
+            loadReviewsManager();
+        }
+
+        function resetEntireSystemData() {
+            if (confirm("⚠️ هل أنت متأكد؟ سيتم مسح كافة الطلبات والكوبونات والتقييمات.")) {
+                localStorage.clear();
+                alert("✅ تم إعادة ضبط النظام بنجاح!");
+                location.reload();
+            }
+        }
+
+        updateRouletteUI();
+        loadManagerMenu();
+        calculateRealFinancials();
+        loadReviewsManager();
+    </script>
+</body>
+
+</html>

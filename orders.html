@@ -318,6 +318,59 @@
         setInterval(loadCoupons, 5000);
         loadOrders();
         loadCoupons();
+
+
+
+        // 1. إعدادات الاتصال الخاصة بمشروع سيرافينو
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_-3X3vfdR2QhPOngXNF7ZDs79agvHSgY",
+            authDomain: "seraphino-store.firebaseapp.com",
+            databaseURL: "https://seraphino-store-default-rtdb.firebaseio.com",
+            projectId: "seraphino-store",
+            storageBucket: "seraphino-store.appspot.com",
+            messagingSenderId: "13316318031",
+            appId: "1:13316318031:web:a1a4ba774f2dff619db3a"
+        };
+
+        // 2. تهيئة الاتصال
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const db = firebase.database();
+
+        // 3. الاستماع للطلبات جديدة في الوقت الحقيقي
+        const ordersRef = db.ref('/');
+
+        ordersRef.on('child_added', (snapshot) => {
+            const orderData = snapshot.val();
+            const orderId = snapshot.key;
+
+            console.log("وصل طلب جديد للكشير:", orderData);
+
+            // استدعاء دالة العرض على الشاشة
+            displayOrderOnCashierScreen(orderId, orderData);
+        });
+
+        // 4. دالة عرض الطلب على الشاشة
+        function displayOrderOnCashierScreen(id, data) {
+            const ordersContainer = document.getElementById('orders-container');
+            if (!ordersContainer) return;
+
+            const orderElement = document.createElement('div');
+            orderElement.className = 'order-card';
+            orderElement.innerHTML = `
+            <h3>طلب جديد #${id.slice(-5)}</h3>
+            <p><strong>الفرع:</strong> ${data.branch || 'غير محدد'}</p>
+            <p><strong>المجموع:</strong> ${data.total} ل.س</p>
+            <hr>
+    `;
+            ordersContainer.prepend(orderElement);
+        }
+
+
+
+
     </script>
 </body>
 
